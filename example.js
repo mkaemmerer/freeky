@@ -3,7 +3,7 @@ const {IOType, IO} = require('./io')
 const {Either, Left, Right} = require('./either')
 const {Maybe, Just, Nothing} = require('./maybe')
 const {ContType, Cont} = require('./cont')
-const {State} = require('./state')
+const {State, Get, Put} = require('./state')
 const {dispatch} = require('./interpret')
 const Monad = require('./monad')
 
@@ -55,3 +55,29 @@ gtZero(10)
 
 gtZero(0).chain(() => asyncGet(4)).foldMap(runApp, Task.of).fork(console.error, console.log)
 // error: it was less than zero
+
+
+// State Monad example
+const stateToTask = command => state => {
+  const unState = command.fold(
+    () => st => [st, st], // Get
+    v => _ => [null, v]   // Put
+  )
+  const [result, nextState] = unState(state)
+  return [Task.of(result), nextState]
+}
+
+const runState = dispatch([
+  [State, stateToTask],
+])
+
+Get.chain(
+  a => Put(10).chain(
+    _ => Get.chain(
+      b => Put(20).chain(
+        _ => Get.map(c => a + b + c)
+      )
+    )
+  )
+)
+.foldRun(runState, Task.of, 99).fork(console.error, console.log)

@@ -51,4 +51,14 @@ Free.prototype.foldMap = function(interpreter, of) {
   })
 }
 
+Free.prototype.foldRun = function(interpreter, of, state) {
+  return this.cata({
+    Pure: a => of(a),
+    Impure: (intruction_of_arg, next) => {
+      const [nextm, nextState] = interpreter(intruction_of_arg)(state)
+      return nextm.chain(result => next(result).foldRun(interpreter, of, nextState))
+    }
+  })
+}
+
 module.exports = { liftF, Free, IGNORE_VALUE }

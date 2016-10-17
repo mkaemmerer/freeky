@@ -1,20 +1,15 @@
 const daggy = require('daggy')
 const liftF = require('./free').liftF
 
-const State = daggy.tagged('run')
+const State = daggy.taggedSum({ Get_: [], Put_: ['v'] })
 
-State.get = liftF(State(s => [s,s]))
-State.put = s => liftF(State(_ => [null,s]))
+const Put = x => liftF(State.Put_(x))
+const Get = liftF(State.Get_)
 
-State.modify = f => State.get.chain(x => State.put(f(x)))
+State.of = Put
 
-State.of = a => State(b => [a, b]);
-State.prototype.chain = function(f) {
-  return State(s => {
-    const xs = this.run(s);
-    return f(xs[0]).run(xs[1]);
-  });
-};
+State.prototype.fold = function(f, g) {
+  return this.cata({ Get_: f, Put_: g })
+}
 
-
-module.exports = State
+module.exports = {State, Get, Put}
